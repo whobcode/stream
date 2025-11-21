@@ -1,0 +1,25 @@
+{
+  "name": "reolink-stream-proxy",
+  "version": "1.0.0",
+  "description": "Cloudflare Workers proxy for Reolink NVR camera streams",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "reolink",
+    "stream",
+    "camera"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250110.0",
+    "wrangler": "^4.49.0",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "reolink-stream-proxy",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-03-07",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "assets": {
+    "directory": "./src/public/",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "NVR_HOST": "hwmnbn.myddns.me:8080",
+    "NVR_USERNAME": "hwmnbn"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "STREAM_CACHE",
+      "id": "placeholder_id",
+      "preview_id": "placeholder_preview_id"
+    }
+  ]
+}

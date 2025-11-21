@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reolink Camera Streams</title>
+    <script src="https://embed.cloudflarestream.com/embed/sdk.latest.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #48bb78;
+            color: white;
+        }
+
+        .status {
+            text-align: center;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .status.loading {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status.hidden {
+            display: none;
+        }
+
+        .camera-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1400px) {
+            .camera-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 900px) {
+            .camera-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .camera-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .camera-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        }
+
+        .camera-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .camera-body {
+            position: relative;
+            background: #000;
+            aspect-ratio: 16 / 9;
+        }
+
+        .camera-stream {
+            width: 100%;
+            height: 100%;
+        }
+
+        .camera-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #9ca3af;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .spinner {
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .camera-info {
+            padding: 15px 20px;
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: #1f2937;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-badge.live {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-badge.offline {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .setup-instructions {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            margin-top: 30px;
+        }
+
+        .setup-instructions h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        .setup-instructions h3 {
+            color: #764ba2;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .setup-instructions ol {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+
+        .setup-instructions code {
+            background: #f3f4f6;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #dc2626;
+        }
+
+        .setup-instructions pre {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        .setup-instructions pre code {
+            background: none;
+            color: #f9fafb;
+            padding: 0;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            padding: 20px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎥 Reolink Camera Streams</h1>
+            <p class="subtitle">Live monitoring of 7 camera feeds</p>
+        </header>
+
+        <div class="controls">
+            <button id="initBtn" class="btn btn-primary">Initialize Streams</button>
+            <button id="refreshBtn" class="btn btn-secondary" disabled>Refresh Streams</button>
+            <button id="fullscreenBtn" class="btn" disabled>Toggle Fullscreen</button>
+        </div>
+
+        <div id="status" class="status hidden"></div>
+
+        <div id="cameraGrid" class="camera-grid"></div>
+
+        <div class="setup-instructions">
+            <h2>📋 Setup Instructions</h2>
+
+            <h3>1. Configure Secrets</h3>
+            <p>Add the required secrets to your Worker:</p>
+            <pre><code>npx wrangler secret put NVR_PASSWORD
+# Enter: @codecam22
+
+npx wrangler secret put CLOUDFLARE_API_TOKEN
+# Create a token at: https://dash.cloudflare.com/profile/api-tokens
+# Permissions needed: Stream:Edit
+
+npx wrangler secret put CLOUDFLARE_ACCOUNT_ID
+# Your Account ID from Cloudflare dashboard</code></pre>
+
+            <h3>2. Create KV Namespace</h3>
+            <pre><code>npx wrangler kv:namespace create STREAM_CACHE
+npx wrangler kv:namespace create STREAM_CACHE --preview</code></pre>
+            <p>Update the <code>kv_namespaces</code> binding in <code>wrangler.jsonc</code> with the returned IDs.</p>
+
+            <h3>3. Configure RTSP Stream Forwarding</h3>
+            <p>You'll need to set up stream forwarding from your Reolink NVR to Cloudflare Stream using one of these methods:</p>
+
+            <h4>Option A: Using FFmpeg (Recommended)</h4>
+            <p>Run FFmpeg on a server that can access your NVR:</p>
+            <pre><code># For each camera (run 7 instances):
+ffmpeg -rtsp_transport tcp \
+  -i rtsp://hwmnbn:@codecam22@hwmnbn.myddns.me:554/h264Preview_01_main \
+  -c:v copy -f flv [RTMP_INGEST_URL]
+
+# Camera URLs follow pattern:
+# Camera 1: rtsp://hwmnbn:@codecam22@hwmnbn.myddns.me:554/h264Preview_01_main
+# Camera 2: rtsp://hwmnbn:@codecam22@hwmnbn.myddns.me:554/h264Preview_02_main
+# ... etc (change _01_, _02_, etc.)</code></pre>
+
+            <h4>Option B: Using Cloudflare Tunnel</h4>
+            <p>Create a tunnel to forward streams securely to Cloudflare Stream.</p>
+
+            <h3>4. Initialize Streams</h3>
+            <p>Click the "Initialize Streams" button above. This will:</p>
+            <ol>
+                <li>Create 7 Cloudflare Stream Live inputs</li>
+                <li>Generate RTMP ingest URLs for each camera</li>
+                <li>Display the URLs you need to configure in FFmpeg</li>
+            </ol>
+
+            <h3>5. Start Streaming</h3>
+            <p>Use the RTMP URLs from step 4 to configure your FFmpeg instances or streaming software.</p>
+        </div>
+
+        <footer>
+            <p>Powered by Cloudflare Workers & Cloudflare Stream</p>
+        </footer>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let streams = [];
+
+        // UI Elements
+        const initBtn = document.getElementById('initBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const statusEl = document.getElementById('status');
+        const cameraGrid = document.getElementById('cameraGrid');
+
+        // Show status message
+        function showStatus(message, type = 'loading') {
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+
+        // Hide status message
+        function hideStatus() {
+            statusEl.className = 'status hidden';
+        }
+
+        // Initialize streams
+        async function initializeStreams() {
+            try {
+                initBtn.disabled = true;
+                showStatus('Initializing camera streams...', 'loading');
+
+                const response = await fetch(`${API_BASE}/api/streams/init`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to initialize streams');
+                }
+
+                streams = data.streams;
+                showStatus(`✓ Successfully initialized ${streams.length} camera streams!`, 'success');
+
+                setTimeout(() => {
+                    hideStatus();
+                    renderCameraGrid();
+                }, 2000);
+
+                refreshBtn.disabled = false;
+                fullscreenBtn.disabled = false;
+
+            } catch (error) {
+                showStatus(`✗ Error: ${error.message}`, 'error');
+                console.error('Initialization error:', error);
+            } finally {
+                initBtn.disabled = false;
+            }
+        }
+
+        // Refresh streams
+        async function refreshStreams() {
+            try {
+                refreshBtn.disabled = true;
+                showStatus('Refreshing camera streams...', 'loading');
+
+                const response = await fetch(`${API_BASE}/api/streams/refresh`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to refresh streams');
+                }
+
+                streams = data.streams;
+                showStatus('✓ Streams refreshed successfully!', 'success');
+
+                setTimeout(() => {
+                    hideStatus();
+                    renderCameraGrid();
+                }, 2000);
+
+            } catch (error) {
+                showStatus(`✗ Error: ${error.message}`, 'error');
+                console.error('Refresh error:', error);
+            } finally {
+                refreshBtn.disabled = false;
+            }
+        }
+
+        // Render camera grid
+        function renderCameraGrid() {
+            cameraGrid.innerHTML = '';
+
+            streams.forEach((stream, index) => {
+                const card = document.createElement('div');
+                card.className = 'camera-card';
+                card.innerHTML = `
+                    <div class="camera-header">${stream.name}</div>
+                    <div class="camera-body">
+                        <div class="camera-placeholder">
+                            <div class="spinner"></div>
+                            <p>Loading stream...</p>
+                        </div>
+                    </div>
+                    <div class="camera-info">
+                        <div class="info-row">
+                            <span class="info-label">Status:</span>
+                            <span class="status-badge offline">Waiting for stream</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Stream ID:</span>
+                            <span class="info-value">${stream.streamUid}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">RTMP Ingest:</span>
+                            <span class="info-value" style="font-size: 0.75rem; word-break: break-all;">
+                                ${stream.rtmpIngestUrl}
+                            </span>
+                        </div>
+                    </div>
+                `;
+                cameraGrid.appendChild(card);
+
+                // Initialize Stream player if playback URL is available
+                if (stream.playbackUrl) {
+                    initializeStreamPlayer(stream, card);
+                }
+            });
+        }
+
+        // Initialize Cloudflare Stream player
+        function initializeStreamPlayer(stream, cardElement) {
+            const streamBody = cardElement.querySelector('.camera-body');
+
+            // Create Stream iframe
+            const iframe = document.createElement('iframe');
+            iframe.src = stream.playbackUrl;
+            iframe.className = 'camera-stream';
+            iframe.style.border = 'none';
+            iframe.allow = 'autoplay; fullscreen';
+            iframe.allowFullscreen = true;
+
+            // Replace placeholder with iframe
+            setTimeout(() => {
+                streamBody.innerHTML = '';
+                streamBody.appendChild(iframe);
+
+                // Update status badge
+                const statusBadge = cardElement.querySelector('.status-badge');
+                statusBadge.textContent = 'Live';
+                statusBadge.className = 'status-badge live';
+            }, 1000);
+        }
+
+        // Toggle fullscreen
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                cameraGrid.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // Event listeners
+        initBtn.addEventListener('click', initializeStreams);
+        refreshBtn.addEventListener('click', refreshStreams);
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+        // Load existing streams on page load
+        async function loadExistingStreams() {
+            try {
+                const response = await fetch(`${API_BASE}/api/streams/list`);
+                const data = await response.json();
+
+                if (data.success && data.streams) {
+                    streams = data.streams;
+                    renderCameraGrid();
+                    refreshBtn.disabled = false;
+                    fullscreenBtn.disabled = false;
+                }
+            } catch (error) {
+                console.log('No existing streams found');
+            }
+        }
+
+        // Load on page load
+        loadExistingStreams();
+    </script>
+</body>
+</html>
